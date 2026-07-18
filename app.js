@@ -4,16 +4,16 @@ const state = {
   userId: null,
   coordinatorUnlocked: false,
   users: [
-    { id:"y1", name:"Riana Jain", role:"Youth", age:15, hours:42, goal:100, email:"riana.jain@example.org" },
-    { id:"y2", name:"Khushi Solanki", role:"Youth", age:16, adultId:"a1", hours:31, goal:250, email:"khushi.solanki@example.org" },
-    { id:"a1", name:"Rashi Solanki", role:"Adult", youthIds:["y2"], leadProjects:["p1"], hours:18, goal:100, email:"rashi.solanki@example.org" },
-    { id:"c1", name:"Prassana Jain", role:"Coordinator", hours:0, goal:100, email:"coordinator@example.org" }
+    { id:"y1", name:"Riana Jain", role:"Youth", age:15, hours:42, goal:100, email:"riana.jain@example.org", accessCode:"riana2026" },
+    { id:"y2", name:"Khushi Solanki", role:"Youth", age:16, adultId:"a1", hours:31, goal:250, email:"khushi.solanki@example.org", accessCode:"khushi2026" },
+    { id:"a1", name:"Rashi Solanki", role:"Adult", youthIds:["y2"], familyId:"solanki", leadProjects:["p1"], hours:18, goal:52, email:"rashi.solanki@example.org", accessCode:"rashi2026" },
+    { id:"c1", name:"Prassana Jain", role:"Coordinator", hours:0, goal:100, email:"coordinator@example.org", accessCode:"jcnc2026" }
   ],
   projects: [
-    { id:"p1", title:"Community Food Drive", type:"Direct Service", date:"2026-08-02", time:"9:00 AM–1:00 PM", location:"JCNC Main Hall", slots:12, status:"Open", hours:4, leadId:"a1", description:"Sort and pack pantry staples for local families.", signups:["y1","y2","a1"], waitlist:[], checkedIn:[] },
-    { id:"p2", title:"Temple Garden Cleanup", type:"Environmental", date:"2026-08-16", time:"8:30 AM–11:30 AM", location:"JCNC Garden", slots:8, status:"Open", hours:3, leadId:"a1", description:"Refresh garden beds and prepare the grounds for fall.", signups:["y2","a1"], waitlist:[], checkedIn:[] },
-    { id:"p3", title:"Back-to-School Kit Assembly", type:"Community", date:"2026-09-05", time:"10:00 AM–2:00 PM", location:"Youth Center", slots:20, status:"Upcoming", signupDate:"2026-08-20", hours:4, leadId:"a1", description:"Assemble supply kits for students in our community.", signups:[], waitlist:[], checkedIn:[] },
-    { id:"p4", title:"Senior Center Tech Help", type:"Direct Service", date:"2026-07-12", time:"1:00 PM–4:00 PM", location:"Fremont Senior Center", slots:6, status:"Completed", hours:3, leadId:"a1", description:"Help seniors learn everyday phone and tablet skills.", signups:["y1","a1"], waitlist:[], checkedIn:["y1","a1"], attendance:{y1:{lateMinutes:20,note:"Parent let us know Riana arrived late because of a school event."},a1:{lateMinutes:0,note:""}} }
+    { id:"p1", title:"Second Harvest Food Bank", type:"Hunger Relief", date:"2026-08-02", time:"9:00 AM–1:00 PM", location:"Second Harvest Warehouse", slots:12, status:"Open", hours:4, leadId:"a1", description:"Sort and pack nutritious groceries for local families through Second Harvest.", signups:["y1","y2","a1"], waitlist:[], checkedIn:[] },
+    { id:"p2", title:"Habitat for Humanity", type:"Community Building", date:"2026-08-16", time:"8:30 AM–11:30 AM", location:"Fremont Build Site", slots:8, status:"Open", hours:3, leadId:"a1", description:"Support a Habitat for Humanity build and help prepare materials for volunteers.", signups:["y2","a1"], waitlist:[], checkedIn:[] },
+    { id:"p3", title:"Community Donation Drive", type:"Donation Drive", date:"2026-09-05", time:"10:00 AM–2:00 PM", location:"JCNC Main Hall", slots:20, status:"Upcoming", signupDate:"2026-08-20", hours:4, leadId:"a1", description:"Collect, sort, and prepare donated essentials for neighbors in need.", signups:[], waitlist:[], checkedIn:[] },
+    { id:"p4", title:"Second Harvest Volunteer Shift", type:"Hunger Relief", date:"2026-07-12", time:"1:00 PM–4:00 PM", location:"Second Harvest Warehouse", slots:6, status:"Completed", hours:3, leadId:"a1", description:"Pack food boxes and prepare pantry orders for distribution.", signups:["y1","a1"], waitlist:[], checkedIn:["y1","a1"], attendance:{y1:{lateMinutes:20,note:"Parent let us know Riana arrived late because of a school event."},a1:{lateMinutes:0,note:""}} }
   ],
   logs: [
     { id:"h1", userId:"y1", projectId:"p4", date:"2026-07-12", hours:3, status:"Pending", label:"Completed assigned tech-help station." },
@@ -39,13 +39,11 @@ function renderAll() { renderHome(); renderProjects(); renderHours(); renderMana
 function emailSignIn(e) {
   e.preventDefault();
   const email = new FormData(e.target).get('email').trim().toLowerCase();
+  const accessCode = new FormData(e.target).get('accessCode');
   const account = state.users.find(u => u.email.toLowerCase() === email);
   if (!account) return toast('No invited volunteer account uses that email.');
-  if (account.role === 'Coordinator') {
-    const password = prompt('Enter Coordinator Password:');
-    if (password !== 'jcnc2026') return toast('Incorrect coordinator password.');
-    state.coordinatorUnlocked = true;
-  }
+  if (account.accessCode !== accessCode) return toast('Incorrect private access code.');
+  if (account.role === 'Coordinator') state.coordinatorUnlocked = true;
   state.userId = account.id;
   $('#login-screen').classList.add('hidden');
   $('#account-area').innerHTML = `<div class="signed-account"><span>${escapeHtml(account.name)}<small>${account.role}</small></span><button onclick="signOut()">Sign out</button></div>`;
@@ -62,13 +60,14 @@ function showView(name) {
 
 function renderHome() {
   const u = currentUser();
-  const approved = state.logs.filter(l => l.userId === u.id && l.status === "Approved").reduce((n,l) => n + l.hours, u.hours || 0);
+  const poolIds = u.role === 'Adult' && u.familyId ? state.users.filter(member=>member.role==='Adult'&&member.familyId===u.familyId).map(member=>member.id) : [u.id];
+  const approved = state.logs.filter(l => poolIds.includes(l.userId) && l.status === "Approved").reduce((n,l) => n + l.hours, poolIds.reduce((n,id)=>n+(user(id)?.hours||0),0));
   const pct = Math.min(100, Math.round(approved / u.goal * 100));
   const joined = state.projects.filter(p => p.signups.includes(u.id) && p.status !== "Completed");
   $("#home-view").innerHTML = `
     <div class="hero"><div><p class="eyebrow">2026–27 program</p><h1>Hello, ${escapeHtml(u.name.split(" ")[0])}</h1><p>${u.role === "Coordinator" ? "Here’s what needs your attention today." : "Every hour makes a difference."}</p></div><span class="avatar">${u.name.split(" ").map(x=>x[0]).join("")}</span></div>
     <div class="stats-grid">
-      <article class="card progress-card"><div class="card-head"><div><p class="label">Approved service</p><h2>${approved} <small>hours</small></h2></div><span class="award">${pct >= 100 ? "★" : "↗"}</span></div><div class="progress"><i style="width:${pct}%"></i></div><div class="progress-meta"><span>${pct}% of ${u.goal} hour goal</span><b>${Math.max(0,u.goal-approved)} to go</b></div></article>
+      <article class="card progress-card"><div class="card-head"><div><p class="label">${u.role==='Adult'?'Combined parent service':'Approved service'}</p><h2>${approved} <small>hours</small></h2></div><span class="award">${pct >= 100 ? "★" : "↗"}</span></div><div class="progress"><i style="width:${pct}%"></i></div><div class="progress-meta"><span>${pct}% of ${u.goal} hour goal${u.role==='Adult'?' shared between parents':''}</span><b>${Math.max(0,u.goal-approved)} to go</b></div></article>
       <article class="mini-card"><b>${joined.length}</b><span>Upcoming signups</span></article><article class="mini-card"><b>${state.logs.filter(l=>l.userId===u.id&&l.status==='Pending').length}</b><span>Hours pending</span></article>
     </div>
     ${calendarSection()}
@@ -106,7 +105,7 @@ function toggleSignup(id,uid=state.userId) {
   closeDialog(); renderAll();
 }
 
-function calendarSection(){const u=currentUser();const events=u.role==='Coordinator'?state.projects:state.projects.filter(p=>p.signups.includes(u.id));return `<section><div class="section-title"><h2>${u.role==='Coordinator'?'All-events calendar':'My calendar'}</h2><span>${events.length} events</span></div><div class="calendar"><div class="calendar-week">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<b>${d}</b>`).join('')}</div><div class="calendar-grid">${calendarDays(2026,7,events)}</div></div></section>`;}
+function calendarSection(){const u=currentUser();const events=u.role==='Coordinator'?state.projects:state.projects.filter(p=>p.signups.includes(u.id));return `<section><div class="section-title calendar-title"><div><p class="eyebrow">August 2026</p><h2>${u.role==='Coordinator'?'All-events calendar':'My calendar'}</h2></div><span>${events.length} events</span></div><div class="calendar"><div class="calendar-week">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<b>${d}</b>`).join('')}</div><div class="calendar-grid">${calendarDays(2026,7,events)}</div></div></section>`;}
 function calendarDays(year,month,events){const first=new Date(year,month,1).getDay(),count=new Date(year,month+1,0).getDate();let html=Array(first).fill('<span class="blank"></span>').join('');for(let day=1;day<=count;day++){const date=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`,matches=events.filter(p=>p.date===date);html+=`<button class="calendar-day ${matches.length?'has-event':''}" ${matches.length?`onclick="openProject('${matches[0].id}')"`:''}><b>${day}</b>${matches.map(p=>`<i title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</i>`).join('')}</button>`;}return html;}
 
 function attendance(id) {
