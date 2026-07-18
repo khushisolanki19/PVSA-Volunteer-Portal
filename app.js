@@ -38,11 +38,14 @@ function renderAll() { renderHome(); renderProjects(); renderHours(); renderMana
 
 function emailSignIn(e) {
   e.preventDefault();
-  const email = new FormData(e.target).get('email').trim().toLowerCase();
-  const accessCode = new FormData(e.target).get('accessCode');
+  const formData = new FormData(e.target);
+  const email = formData.get('email').trim().toLowerCase();
+  const accessCode = formData.get('accessCode');
   const account = state.users.find(u => u.email.toLowerCase() === email);
-  if (!account) return toast('No invited volunteer account uses that email.');
-  if (account.accessCode !== accessCode) return toast('Incorrect private access code.');
+  const error = $('#login-error');
+  if (!account) { error.textContent='No invited volunteer account uses that email. Ask a coordinator to add you.'; error.classList.remove('hidden'); return; }
+  if (account.accessCode !== accessCode) { error.textContent='That access code is incorrect. Codes are case-sensitive.'; error.classList.remove('hidden'); return; }
+  error.classList.add('hidden');
   if (account.role === 'Coordinator') state.coordinatorUnlocked = true;
   state.userId = account.id;
   $('#login-screen').classList.add('hidden');
@@ -141,7 +144,11 @@ function renderManage() {
 
 function projectForm(){openDialog(`<p class="eyebrow">Coordinator</p><h2>Create a project</h2><form onsubmit="createProject(event)"><label>Project name<input name="title" required></label><div class="form-row"><label>Date<input name="date" type="date" required></label><label>Slots<input name="slots" type="number" min="1" value="10" required></label></div><label>Location<input name="location" required></label><label>Description<textarea name="description" required></textarea></label><button class="primary wide" type="submit">Create project</button></form>`)}
 function createProject(e){e.preventDefault();const d=new FormData(e.target);state.projects.unshift({id:'p'+Date.now(),title:d.get('title'),type:'Community',date:d.get('date'),time:'Time TBD',location:d.get('location'),slots:Number(d.get('slots')),status:'Upcoming',hours:0,leadId:'',description:d.get('description'),signups:[],waitlist:[],checkedIn:[]});closeDialog();renderAll();toast('Project created as Upcoming.');}
-function memberDirectory(){openDialog(`<p class="eyebrow">Private · Coordinators only</p><h2>Member directory</h2><div class="member-list">${state.users.map(u=>`<div><span class="avatar small">${u.name.split(' ').map(x=>x[0]).join('')}</span><span><b>${u.name}</b><small>${u.role} · ${u.email}</small></span></div>`).join('')}</div>`)}
+function memberDirectory(){openDialog(`<p class="eyebrow">Private · Coordinators only</p><h2>Member directory</h2><p class="dialog-lead">Invite new members and manage linked families.</p><button class="primary wide" onclick="addMemberForm()">+ Add a new member</button><div class="member-list">${state.users.map(u=>`<div><span class="avatar small">${u.name.split(' ').map(x=>x[0]).join('')}</span><span><b>${u.name}</b><small>${u.role} · ${u.email}${u.goal?` · ${u.goal}h goal`:''}</small></span></div>`).join('')}</div>`)}
+function addMemberForm(){const adults=state.users.filter(u=>u.role==='Adult');openDialog(`<p class="eyebrow">Coordinator enrollment</p><h2>Add a member</h2><form onsubmit="addMember(event)"><label>Full name<input name="name" required autocomplete="name"></label><div class="form-row"><label>Account type<select name="role" required onchange="toggleYouthFields(this.value)"><option value="Youth">Youth</option><option value="Adult">Adult</option></select></label><label>Date of birth<input name="dob" type="date" required></label></div><label>Email address<input name="email" type="email" required autocomplete="email"></label><label>Temporary private access code<input name="accessCode" minlength="8" required placeholder="At least 8 characters"><small>Share this privately. The member uses it with their email.</small></label><label id="parent-link-field">Linked parent or guardian<select name="adultId"><option value="">Select a parent</option>${adults.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}</select></label><button class="primary wide" type="submit">Add member and send to Sheet</button></form>`)}
+function toggleYouthFields(role){$('#parent-link-field')?.classList.toggle('hidden',role!=='Youth');}
+function addMember(e){e.preventDefault();const d=new FormData(e.target),email=d.get('email').trim().toLowerCase();if(state.users.some(u=>u.email.toLowerCase()===email))return toast('A member already uses that email.');const dob=d.get('dob'),age=calculateAge(dob),role=d.get('role'),adultId=role==='Youth'?d.get('adultId'):'';if(role==='Youth'&&!adultId)return toast('Every Youth must have a linked parent or guardian.');const id=(role==='Youth'?'y':'a')+Date.now(),member={id,name:d.get('name').trim(),role,dob,age,email,accessCode:d.get('accessCode'),hours:0,goal:role==='Adult'?52:age>=16?250:100};if(adultId){member.adultId=adultId;const adult=user(adultId);adult.youthIds=[...new Set([...(adult.youthIds||[]),id])];member.familyId=adult.familyId||`family-${adult.id}`;adult.familyId=member.familyId;}if(role==='Adult'){member.youthIds=[];member.familyId=`family-${id}`;}state.users.push(member);fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'addMember',member})}).catch(()=>{});closeDialog();renderAll();toast(`${member.name} was added and can now sign in.`);}
+function calculateAge(dob){const today=new Date(),birth=new Date(dob+'T12:00:00');let age=today.getFullYear()-birth.getFullYear();if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))age--;return age;}
 function exportReport(){const rows=['Volunteer,Role,Approved Hours',...state.users.map(u=>`${u.name},${u.role},${state.logs.filter(l=>l.userId===u.id&&l.status==='Approved').reduce((n,l)=>n+l.hours,u.hours||0)}`)];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));a.download='jcnc-pvsa-hours.csv';a.click();URL.revokeObjectURL(a.href);toast('PVSA hours report exported.');}
 
 function openDialog(html){$("#dialog-body").innerHTML=html;$("#app-dialog").showModal();}
