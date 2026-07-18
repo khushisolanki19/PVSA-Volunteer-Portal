@@ -1,24 +1,24 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQKz6Ril58G76jzZvk-O9KsxplQTDn-V8P_uNvZKr1WBvFIhBKCoEahSDOG45EHoeH/exec";
 
 const state = {
-  userId: "y1",
+  userId: null,
   coordinatorUnlocked: false,
   users: [
-    { id:"y1", name:"Aarav Shah", role:"Youth", age:15, adultId:"a1", hours:42, goal:100, email:"aarav@example.org" },
-    { id:"a1", name:"Neha Shah", role:"Adult", youthIds:["y1"], hours:18, goal:100, email:"neha@example.org" },
-    { id:"l1", name:"Maya Mehta", role:"Adult", leadProjects:["p1"], hours:26, goal:100, email:"maya@example.org" },
+    { id:"y1", name:"Riana Jain", role:"Youth", age:15, hours:42, goal:100, email:"riana.jain@example.org" },
+    { id:"y2", name:"Khushi Solanki", role:"Youth", age:16, adultId:"a1", hours:31, goal:250, email:"khushi.solanki@example.org" },
+    { id:"a1", name:"Rashi Solanki", role:"Adult", youthIds:["y2"], leadProjects:["p1"], hours:18, goal:100, email:"rashi.solanki@example.org" },
     { id:"c1", name:"Prassana Jain", role:"Coordinator", hours:0, goal:100, email:"coordinator@example.org" }
   ],
   projects: [
-    { id:"p1", title:"Community Food Drive", type:"Direct Service", date:"2026-08-02", time:"9:00 AM–1:00 PM", location:"JCNC Main Hall", slots:12, status:"Open", hours:4, leadId:"l1", description:"Sort and pack pantry staples for local families.", signups:["y1","a1","l1"], waitlist:[], checkedIn:[] },
-    { id:"p2", title:"Temple Garden Cleanup", type:"Environmental", date:"2026-08-16", time:"8:30 AM–11:30 AM", location:"JCNC Garden", slots:8, status:"Open", hours:3, leadId:"a1", description:"Refresh garden beds and prepare the grounds for fall.", signups:["l1","a1"], waitlist:[], checkedIn:[] },
-    { id:"p3", title:"Back-to-School Kit Assembly", type:"Community", date:"2026-09-05", time:"10:00 AM–2:00 PM", location:"Youth Center", slots:20, status:"Upcoming", signupDate:"2026-08-20", hours:4, leadId:"l1", description:"Assemble supply kits for students in our community.", signups:[], waitlist:[], checkedIn:[] },
-    { id:"p4", title:"Senior Center Tech Help", type:"Direct Service", date:"2026-07-12", time:"1:00 PM–4:00 PM", location:"Fremont Senior Center", slots:6, status:"Completed", hours:3, leadId:"l1", description:"Help seniors learn everyday phone and tablet skills.", signups:["y1","l1"], waitlist:[], checkedIn:["y1","l1"], attendance:{y1:{lateMinutes:20,note:"Parent let us know Aarav arrived late because of a school event."},l1:{lateMinutes:0,note:""}} }
+    { id:"p1", title:"Community Food Drive", type:"Direct Service", date:"2026-08-02", time:"9:00 AM–1:00 PM", location:"JCNC Main Hall", slots:12, status:"Open", hours:4, leadId:"a1", description:"Sort and pack pantry staples for local families.", signups:["y1","y2","a1"], waitlist:[], checkedIn:[] },
+    { id:"p2", title:"Temple Garden Cleanup", type:"Environmental", date:"2026-08-16", time:"8:30 AM–11:30 AM", location:"JCNC Garden", slots:8, status:"Open", hours:3, leadId:"a1", description:"Refresh garden beds and prepare the grounds for fall.", signups:["y2","a1"], waitlist:[], checkedIn:[] },
+    { id:"p3", title:"Back-to-School Kit Assembly", type:"Community", date:"2026-09-05", time:"10:00 AM–2:00 PM", location:"Youth Center", slots:20, status:"Upcoming", signupDate:"2026-08-20", hours:4, leadId:"a1", description:"Assemble supply kits for students in our community.", signups:[], waitlist:[], checkedIn:[] },
+    { id:"p4", title:"Senior Center Tech Help", type:"Direct Service", date:"2026-07-12", time:"1:00 PM–4:00 PM", location:"Fremont Senior Center", slots:6, status:"Completed", hours:3, leadId:"a1", description:"Help seniors learn everyday phone and tablet skills.", signups:["y1","a1"], waitlist:[], checkedIn:["y1","a1"], attendance:{y1:{lateMinutes:20,note:"Parent let us know Riana arrived late because of a school event."},a1:{lateMinutes:0,note:""}} }
   ],
   logs: [
     { id:"h1", userId:"y1", projectId:"p4", date:"2026-07-12", hours:3, status:"Pending", label:"Completed assigned tech-help station." },
     { id:"h2", userId:"a1", projectId:"p2", date:"2026-07-01", hours:2.5, status:"Approved", label:"Planning & supplies" },
-    { id:"h3", userId:"l1", projectId:"p1", date:"2026-07-16", hours:1.5, status:"Pending", label:"Project preparation" }
+    { id:"h3", userId:"y2", projectId:"p1", date:"2026-07-16", hours:1.5, status:"Pending", label:"Project preparation" }
   ]
 };
 
@@ -30,31 +30,28 @@ const fmtDate = value => new Intl.DateTimeFormat("en-US", {month:"short",day:"nu
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 
 window.addEventListener("DOMContentLoaded", () => {
-  $("#active-user").innerHTML = state.users.map(u => `<option value="${u.id}">${escapeHtml(u.name)} · ${u.role}</option>`).join("");
-  $("#active-user").value = state.userId;
-  $("#active-user").addEventListener("change", e => selectUser(e.target.value));
   document.querySelectorAll(".bottom-nav button").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
-  renderAll();
   syncExistingHours();
 });
 
 function renderAll() { renderHome(); renderProjects(); renderHours(); renderManage(); }
 
-function selectUser(id) {
-  const requested = user(id);
-  if (requested?.role === "Coordinator" && !state.coordinatorUnlocked) {
-    const password = prompt("Enter Coordinator Password:");
-    if (password !== "jcnc2026") {
-      $("#active-user").value = state.userId;
-      if (password !== null) toast("Incorrect coordinator password.");
-      return;
-    }
+function emailSignIn(e) {
+  e.preventDefault();
+  const email = new FormData(e.target).get('email').trim().toLowerCase();
+  const account = state.users.find(u => u.email.toLowerCase() === email);
+  if (!account) return toast('No invited volunteer account uses that email.');
+  if (account.role === 'Coordinator') {
+    const password = prompt('Enter Coordinator Password:');
+    if (password !== 'jcnc2026') return toast('Incorrect coordinator password.');
     state.coordinatorUnlocked = true;
   }
-  state.userId = id;
-  renderAll();
-  showView("home");
+  state.userId = account.id;
+  $('#login-screen').classList.add('hidden');
+  $('#account-area').innerHTML = `<div class="signed-account"><span>${escapeHtml(account.name)}<small>${account.role}</small></span><button onclick="signOut()">Sign out</button></div>`;
+  renderAll(); showView('home');
 }
+function signOut(){state.userId=null;state.coordinatorUnlocked=false;$('#login-screen').classList.remove('hidden');$('#account-area').innerHTML='';document.querySelectorAll('.view').forEach(v=>v.innerHTML='');}
 
 function showView(name) {
   document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
@@ -74,7 +71,8 @@ function renderHome() {
       <article class="card progress-card"><div class="card-head"><div><p class="label">Approved service</p><h2>${approved} <small>hours</small></h2></div><span class="award">${pct >= 100 ? "★" : "↗"}</span></div><div class="progress"><i style="width:${pct}%"></i></div><div class="progress-meta"><span>${pct}% of ${u.goal} hour goal</span><b>${Math.max(0,u.goal-approved)} to go</b></div></article>
       <article class="mini-card"><b>${joined.length}</b><span>Upcoming signups</span></article><article class="mini-card"><b>${state.logs.filter(l=>l.userId===u.id&&l.status==='Pending').length}</b><span>Hours pending</span></article>
     </div>
-    ${u.youthIds?.length ? `<section><div class="section-title"><h2>Family</h2></div>${u.youthIds.map(id => { const y=user(id); return `<button class="family-card" onclick="switchUser('${id}')"><span class="avatar small">${y.name.split(' ').map(x=>x[0]).join('')}</span><span><b>${y.name}</b><small>Youth volunteer · ${y.hours} hours</small></span><strong>›</strong></button>`}).join('')}</section>` : ""}
+    ${calendarSection()}
+    ${u.youthIds?.length ? `<section><div class="section-title"><h2>Linked family</h2></div>${u.youthIds.map(id => { const y=user(id); return `<div class="family-card"><span class="avatar small">${y.name.split(' ').map(x=>x[0]).join('')}</span><span><b>${y.name}</b><small>You can sign ${y.name.split(' ')[0]} up from each project page</small></span></div>`}).join('')}</section>` : ""}
     <section><div class="section-title"><h2>Your next projects</h2><button onclick="showView('projects')">View all</button></div>${joined.length ? joined.slice(0,2).map(projectCard).join("") : `<div class="empty"><span>◇</span><b>No upcoming signups</b><p>Explore projects and choose a way to help.</p><button class="primary" onclick="showView('projects')">Browse projects</button></div>`}</section>`;
 }
 
@@ -89,19 +87,27 @@ function projectCard(p) {
 }
 
 function openProject(id) {
-  const p=project(id), u=currentUser(), signed=p.signups.includes(u.id), wait=p.waitlist.includes(u.id), full=p.signups.length>=p.slots;
+  const p=project(id), u=currentUser();
   const canAttend = p.leadId===u.id || u.role==='Coordinator';
-  openDialog(`<p class="eyebrow">${escapeHtml(p.type)}</p><h2>${escapeHtml(p.title)}</h2><p class="dialog-lead">${escapeHtml(p.description)}</p><dl class="details"><div><dt>Date & time</dt><dd>${fmtDate(p.date)}<br>${p.time}</dd></div><div><dt>Location</dt><dd>${escapeHtml(p.location)}</dd></div><div><dt>Project lead</dt><dd>${escapeHtml(user(p.leadId)?.name || 'To be assigned')}</dd></div><div><dt>Service credit</dt><dd>${p.hours} hours</dd></div></dl><div class="capacity"><span><b>${p.signups.length}/${p.slots}</b> spots filled</span><div class="progress"><i style="width:${Math.min(100,p.signups.length/p.slots*100)}%"></i></div></div>${p.status==='Open' ? `<button class="primary wide" onclick="toggleSignup('${p.id}')">${signed?'Cancel signup':wait?'Leave waitlist':full?'Join waitlist':'Sign up'}</button>` : `<button class="secondary wide" disabled>${p.status==='Upcoming'?'Signup opens '+fmtDate(p.signupDate):p.status}</button>`}${canAttend && (p.status==='Open'||p.status==='Active') ? `<button class="secondary wide" onclick="attendance('${p.id}')">Take attendance</button>`:''}`);
+  const eligible = linkedSignupAccounts(u);
+  openDialog(`<p class="eyebrow">${escapeHtml(p.type)}</p><h2>${escapeHtml(p.title)}</h2><p class="dialog-lead">${escapeHtml(p.description)}</p><dl class="details"><div><dt>Date & time</dt><dd>${fmtDate(p.date)}<br>${p.time}</dd></div><div><dt>Location</dt><dd>${escapeHtml(p.location)}</dd></div><div><dt>Project lead</dt><dd>${escapeHtml(user(p.leadId)?.name || 'To be assigned')}</dd></div><div><dt>Service credit</dt><dd>${p.hours} hours</dd></div></dl><div class="capacity"><span><b>${p.signups.length}/${p.slots}</b> spots filled</span><div class="progress"><i style="width:${Math.min(100,p.signups.length/p.slots*100)}%"></i></div></div>${p.status==='Open' ? `<div class="signup-family"><b>Who are you signing up?</b>${eligible.map(person=>signupControl(p,person)).join('')}</div>` : `<button class="secondary wide" disabled>${p.status==='Upcoming'?'Signup opens '+fmtDate(p.signupDate):p.status}</button>`}${canAttend && (p.status==='Open'||p.status==='Active') ? `<button class="secondary wide" onclick="attendance('${p.id}')">Take attendance</button>`:''}`);
 }
 
-function toggleSignup(id) {
-  const p=project(id), uid=state.userId;
+function linkedSignupAccounts(u){const ids=[u.id,...(u.youthIds||[]),...(u.adultId?[u.adultId]:[])];return [...new Set(ids)].map(user).filter(Boolean);}
+function signupControl(p,person){const signed=p.signups.includes(person.id),wait=p.waitlist.includes(person.id),full=p.signups.length>=p.slots;return `<div><span><b>${escapeHtml(person.name)}</b><small>${person.id===state.userId?'Your account':person.role==='Youth'?'Linked child':'Linked parent'}</small></span><button class="${signed||wait?'secondary':'primary'}" onclick="toggleSignup('${p.id}','${person.id}')">${signed?'Cancel':wait?'Leave waitlist':full?'Join waitlist':'Sign up'}</button></div>`;}
+
+function toggleSignup(id,uid=state.userId) {
+  if(!linkedSignupAccounts(currentUser()).some(u=>u.id===uid)) return toast('You can only sign up yourself or a linked family member.');
+  const p=project(id);
   if (p.signups.includes(uid)) { p.signups=p.signups.filter(x=>x!==uid); if(p.waitlist.length) p.signups.push(p.waitlist.shift()); toast("Signup cancelled. The first waitlisted volunteer was promoted."); }
   else if (p.waitlist.includes(uid)) { p.waitlist=p.waitlist.filter(x=>x!==uid); toast("You left the waitlist."); }
   else if (p.signups.length>=p.slots) { p.waitlist.push(uid); toast("You’re on the waitlist."); }
   else { p.signups.push(uid); toast("You’re signed up!"); }
   closeDialog(); renderAll();
 }
+
+function calendarSection(){const u=currentUser();const events=u.role==='Coordinator'?state.projects:state.projects.filter(p=>p.signups.includes(u.id));return `<section><div class="section-title"><h2>${u.role==='Coordinator'?'All-events calendar':'My calendar'}</h2><span>${events.length} events</span></div><div class="calendar"><div class="calendar-week">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<b>${d}</b>`).join('')}</div><div class="calendar-grid">${calendarDays(2026,7,events)}</div></div></section>`;}
+function calendarDays(year,month,events){const first=new Date(year,month,1).getDay(),count=new Date(year,month+1,0).getDate();let html=Array(first).fill('<span class="blank"></span>').join('');for(let day=1;day<=count;day++){const date=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`,matches=events.filter(p=>p.date===date);html+=`<button class="calendar-day ${matches.length?'has-event':''}" ${matches.length?`onclick="openProject('${matches[0].id}')"`:''}><b>${day}</b>${matches.map(p=>`<i title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</i>`).join('')}</button>`;}return html;}
 
 function attendance(id) {
   const p=project(id);
@@ -142,6 +148,5 @@ function exportReport(){const rows=['Volunteer,Role,Approved Hours',...state.use
 function openDialog(html){$("#dialog-body").innerHTML=html;$("#app-dialog").showModal();}
 function closeDialog(){$("#app-dialog").close();}
 function toast(message){const t=$("#toast");t.textContent=message;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
-function switchUser(id){selectUser(id);$("#active-user").value=state.userId;}
 
 async function syncExistingHours(){try{const res=await fetch(APPS_SCRIPT_URL+'?action=getAllData');if(!res.ok)return;const rows=await res.json();if(!Array.isArray(rows))return;/* Existing Sheet data remains readable; expanded project actions need matching Apps Script endpoints. */}catch(_){/* Demo remains usable if the Sheet bridge is unavailable. */}}

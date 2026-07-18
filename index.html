@@ -11,10 +11,7 @@
   <div class="app-shell">
     <header class="topbar">
       <button class="brand" onclick="showView('home')" aria-label="Go home"><span class="brand-mark">J</span><span>JCNC <b>Volunteer</b></span></button>
-      <div class="profile-switcher">
-        <label for="active-user">Viewing as</label>
-        <select id="active-user" aria-label="Choose demo user"></select>
-      </div>
+      <div id="account-area"></div>
     </header>
 
     <main>
@@ -30,6 +27,18 @@
       <button data-view="hours"><span>◷</span>Hours</button>
       <button data-view="manage" id="manage-tab"><span>⚙</span>Manage</button>
     </nav>
+  </div>
+
+  <div id="login-screen" class="login-screen">
+    <form class="login-card" onsubmit="emailSignIn(event)">
+      <span class="brand-mark">J</span>
+      <p class="eyebrow">JCNC PVSA 2026–27</p>
+      <h1>Volunteer sign in</h1>
+      <p>Use the email connected to your volunteer account. This keeps other people from signing up in your name.</p>
+      <label>Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.org" required></label>
+      <button class="primary wide" type="submit">Continue with email</button>
+      <small>Demo emails: riana.jain@example.org, khushi.solanki@example.org, rashi.solanki@example.org, coordinator@example.org</small>
+    </form>
   </div>
 
   <dialog id="app-dialog"><button class="dialog-close" onclick="closeDialog()" aria-label="Close">×</button><div id="dialog-body"></div></dialog>
