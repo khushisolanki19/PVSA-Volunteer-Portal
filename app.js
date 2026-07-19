@@ -7,7 +7,7 @@ const state = {
     { id:"y1", name:"Riana Jain", role:"Youth", age:15, hours:42, goal:100, email:"riana.jain@example.org", contactEmail:"N/A", phone:"N/A", accessCode:"riana2026" },
     { id:"y2", name:"Khushi Solanki", role:"Youth", age:16, adultId:"a1", hours:31, goal:250, email:"khushi.solanki@example.org", contactEmail:"N/A", phone:"N/A", accessCode:"khushi2026" },
     { id:"a1", name:"Rashi Solanki", role:"Adult", youthIds:["y2"], familyId:"solanki", leadProjects:["p1"], hours:18, goal:52, email:"rashi.solanki@example.org", contactEmail:"N/A", phone:"N/A", accessCode:"rashi2026" },
-    { id:"c1", name:"Prassana Jain", role:"Coordinator", hours:0, goal:100, email:"coordinator@example.org", contactEmail:"N/A", phone:"N/A", accessCode:"jcnc2026" }
+    { id:"c1", name:"Prasanna Jain", role:"Coordinator", hours:0, goal:100, email:"coordinator@example.org", contactEmail:"N/A", phone:"N/A", accessCode:"jcnc2026" }
   ],
   projects: [
     { id:"p1", title:"Second Harvest Food Bank", type:"Hunger Relief", date:"2026-08-02", signupCloseDate:"2026-08-01", waitlistEnabled:true, time:"9:00 AM–1:00 PM", location:"Second Harvest Warehouse", slots:12, status:"Open", hours:4, leadIds:["a1"], description:"Sort and pack nutritious groceries for local families through Second Harvest.", signups:["y1","y2","a1"], waitlist:[], checkedIn:[] },
